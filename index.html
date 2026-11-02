@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COINEX ESPORTS - Free Fire Tournaments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans pb-20">
+
+    <!-- Top Toast Notification Banner -->
+    <div id="toastNotification" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-slate-900 px-4 py-2 rounded-xl font-bold text-xs shadow-2xl hidden items-center gap-2 border border-emerald-300">
+        <i class="fa-solid fa-circle-check text-base"></i>
+        <span id="toastMsg">Transaction Successful!</span>
+    </div>
+
+    <!-- Header Section -->
+    <header class="flex justify-between items-center p-4 bg-slate-800 shadow-md sticky top-0 z-40">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-yellow-400 text-2xl"></i>
+            <h1 class="font-bold text-lg tracking-wider">COINEX ESPORTS</h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <div onclick="switchTab('wallet')" class="bg-slate-700 px-3 py-1 rounded-full flex items-center gap-2 text-sm font-semibold border border-yellow-500/30 cursor-pointer hover:bg-slate-600 transition">
+                <i class="fa-solid fa-wallet text-yellow-400"></i>
+                <span id="userWallet">₹0.00</span>
+            </div>
+            <i class="fa-solid fa-bell text-gray-300 text-xl cursor-pointer"></i>
+        </div>
+    </header>
+
+    <!-- Category Tabs -->
+    <div id="categoryTabs" class="flex justify-around bg-slate-800 border-t border-slate-700 py-2 text-sm font-semibold">
+        <button id="cat-br" onclick="filterCategory('Battle Royale')" class="text-yellow-400 border-b-2 border-yellow-400 pb-1 transition">Battle Royale</button>
+        <button id="cat-cs" onclick="filterCategory('Clash Squad')" class="text-gray-400 hover:text-white pb-1 transition">Clash Squad</button>
+        <button id="cat-ludo" onclick="filterCategory('Ludo / Others')" class="text-gray-400 hover:text-white pb-1 transition">Ludo / Others</button>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div id="mainContainer">
+
+        <!-- TAB 1: ESPORTS -->
+        <main id="tab-esports" class="p-4 space-y-4">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-4 shadow-lg flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-lg">Daily Free Cash Matches!</h2>
+                    <p class="text-xs text-purple-200 mt-1">Join daily matches & win real cash.</p>
+                </div>
+                <i class="fa-solid fa-gamepad text-4xl text-purple-200 opacity-80"></i>
+            </div>
+
+            <!-- WhatsApp Quick Share Banner -->
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-3 shadow-lg flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-xs text-white">Invite Friends & Play Together!</h2>
+                    <p class="text-[10px] text-emerald-100 mt-0.5">Dosto ke sath tournament share karein.</p>
+                </div>
+                <button onclick="shareOnWhatsApp()" class="bg-white text-slate-900 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow hover:bg-emerald-50 transition">
+                    <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i> Share
+                </button>
+            </div>
+
+            <div id="matchesContainer" class="space-y-4">
+                <p class="text-xs text-center text-gray-400">Loading matches...</p>
+            </div>
+        </main>
+
+        <!-- TAB 2: MY MATCHES & LEADERBOARD -->
+        <main id="tab-matches" class="p-4 space-y-4 hidden">
+            <h2 class="font-bold text-lg text-yellow-400 border-b border-slate-700 pb-2">My Joined Matches</h2>
+            <div id="joinedMatchesList" class="space-y-3">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm">Tournament Status</h3>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded font-semibold">Status</span>
+                    </div>
+                    <p id="savedUserDetails" class="text-xs text-gray-400 mt-2">Aapne abhi tak koi match join nahi kiya hai.</p>
+                    
+                    <div class="mt-3 p-3 bg-slate-900 rounded-lg border border-yellow-500/40 text-xs text-yellow-400 flex justify-between items-center shadow-inner">
+                        <div id="roomIdDisplay">
+                            <span class="text-gray-400">Room Credentials:</span> <b class="text-gray-300">Match se 10 min pehle dikhega</b>
+                        </div>
+                        <i class="fa-solid fa-key text-yellow-400 text-base ml-2"></i>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="font-bold text-lg text-yellow-400 border-b border-slate-700 pb-2 pt-4"><i class="fa-solid fa-crown text-yellow-400 mr-2"></i>Recent Match Winners</h2>
+            <div id="leaderboardList" class="space-y-2">
+                <p class="text-xs text-gray-400 text-center">Loading winners...</p>
+            </div>
+        </main>
+
+        <!-- TAB 3: WALLET & TRANSACTION HISTORY -->
+        <main id="tab-wallet" class="p-4 space-y-4 hidden">
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 text-center shadow-lg">
+                <span class="text-xs text-gray-400 uppercase tracking-wider">Total Balance</span>
+                <h1 id="walletBalanceText" class="text-3xl font-extrabold text-yellow-400 mt-1">₹0.00</h1>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="openAddMoneyModal()" class="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 py-2.5 rounded-xl font-bold text-xs transition">
+                        <i class="fa-solid fa-plus mr-1"></i> ADD MONEY
+                    </button>
+                    <button onclick="openWithdrawModal()" class="w-1/2 bg-yellow-500 hover:bg-yellow-400 text-slate-900 py-2.5 rounded-xl font-bold text-xs transition">
+                        <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> WITHDRAW
+                    </button>
+                </div>
+            </div>
+
+            <!-- Transaction History Section -->
+            <div class="space-y-3 pt-2">
+                <h3 class="font-bold text-sm text-yellow-400 flex items-center gap-2 border-b border-slate-700 pb-2">
+                    <i class="fa-solid fa-receipt"></i> Recent Transaction History
+                </h3>
+                <div id="transactionHistoryList" class="space-y-2">
+                    <p class="text-xs text-gray-400 text-center">Loading transaction history...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 4: PROFILE & AUTHENTICATION -->
+        <main id="tab-profile" class="p-4 space-y-4 hidden">
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-yellow-500 rounded-full flex items-center justify-center text-slate-900 text-2xl font-bold shadow-md">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <h3 id="profileNameDisplay" class="font-bold text-base">Guest User</h3>
+                        <p id="profileUidDisplay" class="text-xs text-gray-400">Mobile: Not Logged In</p>
+                    </div>
+                </div>
+
+                <!-- Player Statistics Box -->
+                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-700 text-center">
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <span class="text-[10px] text-gray-400 block">Total Joined Matches</span>
+                        <b id="statTotalMatches" class="text-yellow-400 text-sm">0</b>
+                    </div>
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <span class="text-[10px] text-gray-400 block">Account Status</span>
+                        <b id="accountStatusText" class="text-red-400 text-xs">Logged Out 🔴</b>
+                    </div>
+                </div>
+
+                <!-- LOGIN / SIGNUP FORM -->
+                <div id="authSection" class="space-y-3 pt-3 border-t border-slate-700">
+                    <div class="flex border-b border-slate-700 mb-2">
+                        <button id="btnTabLogin" onclick="toggleAuthMode('login')" class="w-1/2 pb-2 text-xs font-bold text-yellow-400 border-b-2 border-yellow-400">LOGIN</button>
+                        <button id="btnTabSignup" onclick="toggleAuthMode('signup')" class="w-1/2 pb-2 text-xs font-bold text-gray-400 hover:text-white">CREATE ACCOUNT</button>
+                    </div>
+
+                    <!-- LOGIN FORM -->
+                    <div id="formLogin" class="space-y-2">
+                        <input type="tel" id="loginMobile" placeholder="10-digit Mobile Number" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        <input type="password" id="loginPass" placeholder="Password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        <button onclick="handleLogin()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-2.5 rounded-xl text-xs transition shadow-lg mt-1">
+                            LOG IN TO ACCOUNT
+                        </button>
+                    </div>
+
+                    <!-- SIGNUP FORM -->
+                    <div id="formSignup" class="space-y-2 hidden">
+                        <input type="text" id="regName" placeholder="Full Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        <input type="tel" id="regMobile" placeholder="10-digit Mobile Number" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        <input type="password" id="regPass" placeholder="Create Password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="regIgn" placeholder="Free Fire Name (IGN)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                            <input type="text" id="regUid" placeholder="Free Fire UID" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-yellow-400">
+                        </div>
+                        <button onclick="handleSignup()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-2.5 rounded-xl text-xs transition shadow-lg mt-1">
+                            CREATE NEW ACCOUNT
+                        </button>
+                    </div>
+                </div>
+
+                <div id="logoutSection" class="hidden pt-3 border-t border-slate-700">
+                    <button onclick="logoutUser()" class="w-full bg-red-600/20 border border-red-500/40 text-red-400 font-bold py-2.5 rounded-xl text-xs transition hover:bg-red-600/30">
+                        LOGOUT ACCOUNT
+                    </button>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Modals (Join, Rules, Add Money, Withdraw) -->
+    <div id="joinModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 id="modalTitle" class="font-bold text-base text-yellow-400">Join Match</h3>
+                <i onclick="closeJoinModal()" class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer text-lg"></i>
+            </div>
+            <div class="space-y-3 text-xs text-gray-300">
+                <p>Aap apne saved account se direct join kar rahe hain:</p>
+                <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 space-y-1">
+                    <p><b>IGN:</b> <span id="modalIgnText">--</span></p>
+                    <p><b>UID:</b> <span id="modalUidText">--</span></p>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50 flex justify-between">
+                    <span class="text-gray-400">Entry Fee:</span>
+                    <span id="modalFee" class="font-bold text-yellow-400">₹20</span>
+                </div>
+            </div>
+            <button onclick="confirmJoinMatch()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 py-2.5 rounded-lg font-bold text-sm transition">
+                CONFIRM & JOIN
+            </button>
+        </div>
+    </div>
+
+
+
+    <div id="rulesModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-base text-yellow-400"><i class="fa-solid fa-shield-halved mr-2"></i>Rules & Guidelines</h3>
+                <i onclick="closeRulesModal()" class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer text-lg"></i>
+            </div>
+            <div class="space-y-2 text-xs text-gray-300 max-h-60 overflow-y-auto pr-1">
+                <p>1. <b>No Hacking:</b> Hack use karne par permanent ban.</p>
+                <p>2. <b>Room Timing:</b> Match se 10 min pehle Room ID/Pass "My Matches" me milega.</p>
+                <p>3. <b>Fair Play:</b> Team-up karna sakht mana hai.</p>
+            </div>
+            <button onclick="closeRulesModal()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 py-2.5 rounded-lg font-bold text-xs transition">I UNDERSTAND</button>
+        </div>
+    </div>
+
+    <div id="addMoneyModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-base text-emerald-400"><i class="fa-solid fa-wallet mr-2"></i>Add Money</h3>
+                <i onclick="closeAddMoneyModal()" class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer text-lg"></i>
+            </div>
+            <div class="space-y-2 text-xs text-gray-300 text-center">
+                <p class="text-gray-400">Pay to UPI: <b class="text-yellow-400 select-all">8303459630@fam</b></p>
+                <div class="bg-white p-2 rounded-xl inline-block shadow-md">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=8303459630@fam&pn=RishiYadav" alt="QR" class="w-36 h-36 mx-auto object-contain">
+                </div>
+                <div class="text-left space-y-2 pt-2 border-t border-slate-700">
+                    <input type="number" id="depositAmount" placeholder="Amount (₹)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    <input type="text" id="upiUtr" placeholder="UPI UTR / Transaction ID" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+            </div>
+            <button onclick="submitDepositRequest()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 py-2.5 rounded-lg font-bold text-sm transition">SUBMIT DEPOSIT</button>
+        </div>
+    </div>
+
+    <div id="withdrawModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-base text-yellow-400"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdraw</h3>
+                <i onclick="closeWithdrawModal()" class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer text-lg"></i>
+            </div>
+            <div class="space-y-3 text-xs text-gray-300">
+                <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 flex justify-between">
+                    <span class="text-gray-400">Available:</span> <b id="withdrawAvailableBal" class="text-yellow-400">₹0.00</b>
+                </div>
+                <input type="number" id="withdrawAmount" placeholder="Amount (Min ₹30)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                <input type="text" id="withdrawUpiId" placeholder="Your UPI ID" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+            </div>
+            <button onclick="submitWithdrawRequest()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 py-2.5 rounded-lg font-bold text-sm transition">SUBMIT WITHDRAWAL</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around py-2 z-40">
+        <button onclick="switchTab('esports')" id="nav-esports" class="flex flex-col items-center text-yellow-400 text-xs">
+            <i class="fa-solid fa-gamepad text-lg"></i><span>Esports</span>
+        </button>
+        <button onclick="switchTab('matches')" id="nav-matches" class="flex flex-col items-center text-gray-400 hover:text-white text-xs">
+            <i class="fa-solid fa-trophy text-lg"></i><span>My Matches</span>
+        </button>
+        <button onclick="switchTab('wallet')" id="nav-wallet" class="flex flex-col items-center text-gray-400 hover:text-white text-xs">
+            <i class="fa-solid fa-wallet text-lg"></i><span>Wallet</span>
+        </button>
+        <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-gray-400 hover:text-white text-xs">
+            <i class="fa-solid fa-user text-lg"></i><span>Profile</span>
+        </button>
+    </nav>
+
+    <!-- Script with New Firebase Config -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJ38YBPxLWTQcU00ioyqLWmNzqE4GSXOA",
+            authDomain: "coinex-cf911.firebaseapp.com",
+            projectId: "coinex-cf911",
+            storageBucket: "coinex-cf911.firebasestorage.app",
+            messagingSenderId: "949670057178",
+            appId: "1:949670057178:web:8754ec40c8c909873cc1e3",
+            measurementId: "G-WZY4F9B9XQ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let userWalletBalance = 0.00;
+        let selectedMatch = "";
+        let matchFee = 0;
+        let walletRef = null;
+        let matchesRef = null;
+        let currentSelectedCategory = "Battle Royale";
+
+        window.onload = function() {
+            checkLoginState();
+            listenForRoomDetails();
+            loadMatchesFromFirebase();
+            loadLeaderboardResults();
+        };
+        // Room ID aur Password Update karne ke liye
+function updateRoomCredentials() {
+    const roomId = document.getElementById('adminRoomId').value.trim();
+    const roomPass = document.getElementById('adminRoomPass').value.trim();
+
+    if (!roomId || !roomPass) {
+        alert("Room ID aur Password dono daalein!");
+        return;
+    }
+
+    db.ref('currentRoomDetails').set({
+        roomId: roomId,
+        roomPass: roomPass,
+        updatedAt: new Date().toLocaleString()
+    }, (err) => {
+        if (!err) {
+            alert("Room credentials successfully update ho gaye!");
+            document.getElementById('adminRoomId').value = "";
+            document.getElementById('adminRoomPass').value = "";
+        } else {
+            alert("Error: " + err.message);
+        }
+    });
+}
+        function showToast(msg) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        }
+
+        function shareOnWhatsApp() {
+            let message = "Bhai Coinex Esports par Free Fire ka daily match join kar aur cash jeeto!";
+            if (navigator.share) {
+                navigator.share({ title: 'Coinex Esports', text: message, url: window.location.href }).catch(() => {});
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+            }
+        }
+
+        function toggleAuthMode(mode) {
+            if (mode === 'login') {
+                document.getElementById('formLogin').classList.remove('hidden');
+                document.getElementById('formSignup').classList.add('hidden');
+                document.getElementById('btnTabLogin').className = "w-1/2 pb-2 text-xs font-bold text-yellow-400 border-b-2 border-yellow-400";
+                document.getElementById('btnTabSignup').className = "w-1/2 pb-2 text-xs font-bold text-gray-400 hover:text-white";
+            } else {
+                document.getElementById('formLogin').classList.add('hidden');
+                document.getElementById('formSignup').classList.remove('hidden');
+                document.getElementById('btnTabSignup').className = "w-1/2 pb-2 text-xs font-bold text-yellow-400 border-b-2 border-yellow-400";
+                document.getElementById('btnTabLogin').className = "w-1/2 pb-2 text-xs font-bold text-gray-400 hover:text-white";
+            }
+        }
+
+        function checkLoginState() {
+            let savedMobile = localStorage.getItem('coinex_mobile');
+            if (savedMobile) {
+                db.ref('users/' + savedMobile).on('value', (snapshot) => {
+                    let user = snapshot.val();
+                    if (user) {
+                        document.getElementById('profileNameDisplay').innerText = user.name || user.ign;
+                        document.getElementById('profileUidDisplay').innerText = "Mobile: " + savedMobile;
+                        document.getElementById('accountStatusText').className = "text-emerald-400 text-xs";
+                        document.getElementById('accountStatusText').innerText = "Active 🟢";
+                        document.getElementById('authSection').classList.add('hidden');
+                        document.getElementById('logoutSection').classList.remove('hidden');
+
+                        localStorage.setItem('coinex_ign', user.ign);
+                        localStorage.setItem('coinex_uid', user.uid);
+
+                        loadUserWallet(savedMobile);
+                        loadUserJoinedMatches(user.uid);
+                        loadTransactionHistory(savedMobile);
+                        loadUserStats(user.uid);
+                    }
+                });
+            } else {
+                document.getElementById('profileNameDisplay').innerText = "Guest User";
+                document.getElementById('profileUidDisplay').innerText = "Mobile: Not Logged In";
+                document.getElementById('accountStatusText').className = "text-red-400 text-xs";
+                document.getElementById('accountStatusText').innerText = "Logged Out 🔴";
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('logoutSection').classList.add('hidden');
+
+                userWalletBalance = 0.00;
+                document.getElementById('userWallet').innerText = "₹0.00";
+                document.getElementById('walletBalanceText').innerText = "₹0.00";
+                document.getElementById('savedUserDetails').innerHTML = "Aapne abhi tak koi match join nahi kiya hai.";
+                document.getElementById('transactionHistoryList').innerHTML = `<p class="text-xs text-gray-400 text-center">Phele login karein.</p>`;
+                document.getElementById('statTotalMatches').innerText = "0";
+            }
+        }
+
+        function handleSignup() {
+            let name = document.getElementById('regName').value.trim();
+            let mobile = document.getElementById('regMobile').value.trim();
+            let pass = document.getElementById('regPass').value.trim();
+            let ign = document.getElementById('regIgn').value.trim();
+            let uid = document.getElementById('regUid').value.trim();
+
+            if (!name || !mobile || !pass || !ign || !uid) { alert("Saari details bharein!"); return; }
+            if (mobile.length < 10) { alert("Sahi mobile number daalein!"); return; }
+
+            db.ref('users/' + mobile).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    alert("Yeh mobile number pehle se registered hai! Login karein.");
+                    toggleAuthMode('login');
+                } else {
+                    db.ref('users/' + mobile).set({
+                        name, mobile, pass, ign, uid, wallet: 0.00, createdAt: new Date().toLocaleString()
+                    }, (err) => {
+                        if (!err) {
+                            localStorage.setItem('coinex_mobile', mobile);
+                            localStorage.setItem('coinex_ign', ign);
+                            localStorage.setItem('coinex_uid', uid);
+                            alert("Account successfully create ho gaya!");
+                            checkLoginState();
+                        }
+                    });
+                }
+            });
+        }
+
+        function handleLogin() {
+            let mobile = document.getElementById('loginMobile').value.trim();
+            let pass = document.getElementById('loginPass').value.trim();
+            if (!mobile || !pass) { alert("Mobile aur Password daalein!"); return; }
+
+            db.ref('users/' + mobile).once('value', (snapshot) => {
+                let user = snapshot.val();
+                if (user) {
+                    if (user.pass === pass) {
+                        localStorage.setItem('coinex_mobile', mobile);
+                        localStorage.setItem('coinex_ign', user.ign);
+                        localStorage.setItem('coinex_uid', user.uid);
+                        alert("Welcome back " + (user.name || user.ign) + "!");
+                        checkLoginState();
+                    } else { alert("Galat Password!"); }
+                } else { alert("Mobile number registered nahi hai!"); }
+            });
+        }
+
+        function logoutUser() {
+            localStorage.clear();
+            alert("Logout ho chuke hain.");
+            checkLoginState();
+            switchTab('esports');
+        }
+
+        function loadUserWallet(mobile) {
+            db.ref('users/' + mobile + '/wallet').on('value', (snapshot) => {
+                let balance = snapshot.val();
+                userWalletBalance = balance !== null ? Number(balance) : 0.00;
+                document.getElementById('userWallet').innerText = "₹" + userWalletBalance.toFixed(2);
+                document.getElementById('walletBalanceText').innerText = "₹" + userWalletBalance.toFixed(2);
+            });
+        }
+
+        function loadUserStats(uid) {
+            db.ref('registrations/' + uid).on('value', (snapshot) => {
+                document.getElementById('statTotalMatches').innerText = snapshot.exists() ? "1" : "0";
+            });
+        }
+
+        function loadTransactionHistory(mobile) {
+            const list = document.getElementById('transactionHistoryList');
+            db.ref('transactions/' + mobile).on('value', (snapshot) => {
+                list.innerHTML = "";
+                let data = snapshot.val();
+                if (!data) { list.innerHTML = `<p class="text-xs text-gray-400 text-center">Koi transaction nahi hai.</p>`; return; }
+                let items = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+                items.forEach(t => {
+                    let isDep = t.type === 'DEPOSIT';
+                    list.innerHTML += `
+                        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs">
+                            <div><b>${isDep ? 'Deposit' : 'Withdrawal'}</b><br><span class="text-[10px] text-gray-400">${t.date}</span></div>
+                            <div class="text-right"><span class="font-bold ${isDep ? 'text-emerald-400' : 'text-red-400'}">${isDep ? '+' : '-'}₹${t.amount}</span><br><span class="text-[9px] text-yellow-400">${t.status}</span></div>
+                        </div>`;
+                });
+            });
+        }
+
+        function loadUserJoinedMatches(uid) {
+            db.ref('registrations/' + uid).on('value', (snapshot) => {
+                let data = snapshot.val();
+                document.getElementById('savedUserDetails').innerHTML = data ? `<b>Match:</b> ${data.matchName}<br><b>IGN:</b> ${data.ign} | <b>UID:</b> ${data.uid}` : "Aapne koi match join nahi kiya.";
+            });
+        }
+
+        function loadLeaderboardResults() {
+            db.ref('results').on('value', (snapshot) => {
+                const list = document.getElementById('leaderboardList');
+                list.innerHTML = "";
+                let data = snapshot.val();
+                if (!data) { list.innerHTML = `<p class="text-xs text-gray-400 text-center">Koi result nahi hai.</p>`; return; }
+                for (let id in data) {
+                    let r = data[id];
+                    list.innerHTML += `<div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs"><div><b>${r.ign}</b> (${r.uid})<br><span class="text-[10px] text-gray-400">${r.matchTitle}</span></div><span class="text-emerald-400 font-bold">Won ₹${r.prize}</span></div>`;
+                }
+            });
+        }
+
+        function filterCategory(cat) {
+            currentSelectedCategory = cat;
+            ['br', 'cs', 'ludo'].forEach(c => document.getElementById('cat-' + c).className = "text-gray-400 hover:text-white pb-1 transition");
+            if(cat === 'Battle Royale') document.getElementById('cat-br').className = "text-yellow-400 border-b-2 border-yellow-400 pb-1 transition";
+            else if(cat === 'Clash Squad') document.getElementById('cat-cs').className = "text-yellow-400 border-b-2 border-yellow-400 pb-1 transition";
+            else document.getElementById('cat-ludo').className = "text-yellow-400 border-b-2 border-yellow-400 pb-1 transition";
+            loadMatchesFromFirebase();
+        }
+
+        function openRulesModal() { document.getElementById('rulesModal').style.display = 'flex'; }
+        function closeRulesModal() { document.getElementById('rulesModal').style.display = 'none'; }
+        function openAddMoneyModal() { if (!localStorage.getItem('coinex_mobile')) { switchTab('profile'); return; } document.getElementById('addMoneyModal').style.display = 'flex'; }
+        function closeAddMoneyModal() { document.getElementById('addMoneyModal').style.display = 'none'; }
+        function openWithdrawModal() { if (!localStorage.getItem('coinex_mobile')) { switchTab('profile'); return; } document.getElementById('withdrawAvailableBal').innerText = "₹" + userWalletBalance.toFixed(2); document.getElementById('withdrawModal').style.display = 'flex'; }
+        function closeWithdrawModal() { document.getElementById('withdrawModal').style.display = 'none'; }
+
+        function submitDepositRequest() {
+            let amount = document.getElementById('depositAmount').value.trim();
+            let utr = document.getElementById('upiUtr').value.trim();
+            let mobile = localStorage.getItem('coinex_mobile'), ign = localStorage.getItem('coinex_ign'), uid = localStorage.getItem('coinex_uid');
+            if (!amount || !utr) { alert("Details bharein!"); return; }
+            let txId = 'tx_' + Date.now(), nowStr = new Date().toLocaleString();
+            db.ref('deposits/' + utr).set({ mobile, uid, ign, amount: Number(amount), utr, txId, status: "Pending", requestedAt: nowStr });
+            db.ref('transactions/' + mobile + '/' + txId).set({ type: 'DEPOSIT', amount: Number(amount), status: 'Pending', date: nowStr, timestamp: Date.now() }, () => {
+                showToast("Deposit Request Submitted!"); closeAddMoneyModal();
+            });
+        }
+
+        function submitWithdrawRequest() {
+            let amt = Number(document.getElementById('withdrawAmount').value.trim());
+            let upiId = document.getElementById('withdrawUpiId').value.trim();
+            let mobile = localStorage.getItem('coinex_mobile'), ign = localStorage.getItem('coinex_ign'), uid = localStorage.getItem('coinex_uid');
+            if (!amt || amt < 30) { alert("Min withdrawal ₹30 hai!"); return; }
+            if (amt > userWalletBalance) { alert("Balance kam hai!"); return; }
+            if (!upiId.includes('@')) { alert("Sahi UPI ID dalein!"); return; }
+            let newBal = userWalletBalance - amt, txId = 'tx_' + Date.now(), nowStr = new Date().toLocaleString();
+            db.ref('users/' + mobile).update({ wallet: newBal }, (err) => {
+                if (!err) {
+                    db.ref('withdrawals/w_' + Date.now()).set({ mobile, uid, ign, amount: amt, upiId, txId, status: "Pending", requestedAt: nowStr });
+                    db.ref('transactions/' + mobile + '/' + txId).set({ type: 'WITHDRAWAL', amount: amt, status: 'Pending', date: nowStr, timestamp: Date.now() }, () => {
+                        showToast("Withdrawal Submitted!"); closeWithdrawModal();
+                    });
+                }
+            });
+        }
+
+        function loadMatchesFromFirebase() {
+            const container = document.getElementById('matchesContainer');
+            db.ref('matches').on('value', (snapshot) => {
+                container.innerHTML = "";
+                let data = snapshot.val();
+                if (!data) { container.innerHTML = `<div class="bg-slate-800 p-4 rounded-xl text-center text-xs text-gray-400">Koi active match nahi hai.</div>`; return; }
+                let has = false;
+                for (let id in data) {
+                    let m = data[id];
+                    if ((m.category || "Battle Royale") === currentSelectedCategory) {
+                        has = true;
+                        container.innerHTML += `
+                            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg p-3 space-y-2">
+                                <div class="flex justify-between items-center"><b class="text-sm">${m.title}</b><span class="text-xs text-yellow-400">${m.time}</span></div>
+                                <div class="grid grid-cols-3 text-center text-[11px] bg-slate-900 p-2 rounded"><div>Prize: ₹${m.prize}</div><div>Per Kill: ₹${m.perkill}</div><div>Fee: ₹${m.fee}</div></div>
+                                <button onclick="openJoinModal('${m.title}', ${m.fee})" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 py-2 rounded font-bold text-xs">JOIN MATCH</button>
+                            </div>`;
+                    }
+                }
+                if (!has) container.innerHTML = `<div class="bg-slate-800 p-4 rounded-xl text-center text-xs text-gray-400">Is category mein match nahi hai.</div>`;
+            });
+        }
+
+        function openJoinModal(title, fee) {
+            if (!localStorage.getItem('coinex_mobile')) { switchTab('profile'); return; }
+            selectedMatch = title; matchFee = Number(fee);
+            document.getElementById('modalTitle').innerText = "Join: " + title;
+            document.getElementById('modalIgnText').innerText = localStorage.getItem('coinex_ign');
+            document.getElementById('modalUidText').innerText = localStorage.getItem('coinex_uid');
+            document.getElementById('modalFee').innerText = "₹" + matchFee;
+            document.getElementById('joinModal').style.display = 'flex';
+        }
+        function closeJoinModal() { document.getElementById('joinModal').style.display = 'none'; }
+
+        function confirmJoinMatch() {
+            let mobile = localStorage.getItem('coinex_mobile'), ign = localStorage.getItem('coinex_ign'), uid = localStorage.getItem('coinex_uid');
+            if (userWalletBalance < matchFee) { alert("Balance kam hai!"); closeJoinModal(); switchTab('wallet'); return; }
+            db.ref('users/' + mobile).update({ wallet: userWalletBalance - matchFee }, () => {
+                db.ref('registrations/' + uid).set({ mobile, ign, uid, matchName: selectedMatch, joinedAt: new Date().toLocaleString() }, () => {
+                    showToast("Joined Match Successfully!"); closeJoinModal(); switchTab('matches');
+                });
+            });
+        }
+
+        function switchTab(tab) {
+            ['esports', 'matches', 'wallet', 'profile'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+                document.getElementById('nav-' + t).className = "flex flex-col items-center text-gray-400 hover:text-white text-xs";
+            });
+            document.getElementById('categoryTabs').style.display = (tab === 'esports') ? 'flex' : 'none';
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            document.getElementById('nav-' + tab).className = "flex flex-col items-center text-yellow-400 text-xs";
+        }
+
+        function listenForRoomDetails() {
+            let uid = localStorage.getItem('coinex_uid');
+            const box = document.getElementById('roomIdDisplay');
+            if (!uid) return;
+            db.ref('registrations/' + uid).on('value', (snap) => {
+                if (snap.exists()) {
+                    db.ref('currentRoomDetails').on('value', (s) => {
+                        let d = s.val();
+                        box.innerHTML = (d && d.roomId) ? `Room ID: <b class="text-emerald-400">${d.roomId}</b> | Pass: <b class="text-emerald-400">${d.roomPass}</b>` : `Room: Admin publish karega`;
+                    });
+                } else {
+                    box.innerHTML = `Match join karne ke baad dikhega`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

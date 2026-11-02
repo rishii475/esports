@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COINEX ESPORTS - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans p-4 pb-20">
+    <header class="flex justify-between items-center p-4 bg-slate-800 rounded-xl shadow-lg border border-slate-700 mb-6">
+        <h1 class="font-bold text-lg"><i class="fa-solid fa-user-shield text-yellow-400 mr-2"></i>ADMIN DASHBOARD</h1>
+        <span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-full font-bold">LIVE</span>
+    </header>
+
+    <div class="space-y-6 max-w-xl mx-auto">
+        <!-- 1. Registered Users List -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+            <h2 class="font-bold text-indigo-400 text-sm flex justify-between"><span>Registered Users</span><span id="totalUsersCount" class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded">0 Users</span></h2>
+            <div id="adminUsersList" class="space-y-2 max-h-60 overflow-y-auto"><p class="text-xs text-gray-400 text-center">Loading...</p></div>
+        </section>
+
+        <!-- 2. Add Match -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 text-xs">
+            <h2 class="font-bold text-yellow-400 text-sm">Add Tournament</h2>
+            <select id="matchCategory" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"><option value="Battle Royale">Battle Royale</option><option value="Clash Squad">Clash Squad</option><option value="Ludo / Others">Ludo / Others</option></select>
+            <input type="text" id="matchTitle" placeholder="Match Title" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+            <div class="grid grid-cols-2 gap-2"><input type="text" id="matchTime" placeholder="Time (e.g. 8:00 PM)" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"><input type="number" id="matchFee" placeholder="Fee" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"></div>
+            <div class="grid grid-cols-2 gap-2"><input type="number" id="matchPrize" placeholder="Prize Pool" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"><input type="number" id="matchPerkill" placeholder="Per Kill" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"></div>
+            <button onclick="addNewMatch()" class="w-full bg-yellow-500 text-slate-900 font-bold py-2.5 rounded">PUBLISH MATCH</button>
+        </section>
+
+        <!-- 3. Active Matches List (Manage / Delete) -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+            <h2 class="font-bold text-yellow-400 text-sm">Active Matches (Can Delete)</h2>
+            <div id="adminMatchesList" class="space-y-2">
+                <p class="text-xs text-gray-400 text-center">Loading active matches...</p>
+            </div>
+        </section>
+
+        <!-- 4. Room Credentials -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 text-xs">
+            <h2 class="font-bold text-emerald-400 text-sm">Room Credentials</h2>
+            <div class="grid grid-cols-2 gap-2"><input type="text" id="adminRoomId" placeholder="Room ID" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"><input type="text" id="adminRoomPass" placeholder="Password" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"></div>
+            <button onclick="updateRoomCredentials()" class="w-full bg-emerald-500 text-slate-900 font-bold py-2 rounded">UPDATE ROOM</button>
+        </section>
+
+        <!-- 5. Deposits -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+            <h2 class="font-bold text-emerald-400 text-sm">Pending Deposits</h2>
+            <div id="adminDepositsList" class="space-y-2"><p class="text-xs text-gray-400 text-center">No requests.</p></div>
+        </section>
+
+        <!-- 6. Withdrawals -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3">
+            <h2 class="font-bold text-red-400 text-sm">Pending Withdrawals</h2>
+            <div id="adminWithdrawalsList" class="space-y-2"><p class="text-xs text-gray-400 text-center">No requests.</p></div>
+        </section>
+
+        <!-- 7. Publish Winner & Results List (Can Delete) -->
+        <section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 text-xs">
+            <h2 class="font-bold text-yellow-400 text-sm">Publish Winner & Auto Payout</h2>
+            <input type="text" id="resMatchTitle" placeholder="Match Title" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+            <input type="text" id="resWinnerUid" placeholder="Winner UID" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+            <input type="text" id="resWinnerIgn" placeholder="Winner IGN" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
+            <div class="grid grid-cols-2 gap-2"><input type="number" id="resKills" placeholder="Kills" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"><input type="number" id="resPrize" placeholder="Prize (₹)" class="bg-slate-900 border border-slate-700 rounded p-2 text-white"></div>
+            <button onclick="publishResult()" class="w-full bg-yellow-500 text-slate-900 font-bold py-2.5 rounded">PAY WINNER & PUBLISH</button>
+            
+            <div class="pt-3 border-t border-slate-700">
+                <h3 class="font-bold text-yellow-400 mb-2">Published Results (Can Delete)</h3>
+                <div id="adminResultsList" class="space-y-2 max-h-48 overflow-y-auto">
+                    <p class="text-xs text-gray-400 text-center">Loading published results...</p>
+                </div>
+            </div>
+        </section>
+    </div>
+    <!-- Room Credentials Section -->
+<section class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-3 text-xs shadow-xl">
+    <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+        <h2 class="font-bold text-emerald-400 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-key"></i> Room Credentials (ID & Password)
+        </h2>
+        <button onclick="clearRoomCredentials()" class="bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/40 text-[10px] font-bold px-2.5 py-1 rounded-lg transition">
+            <i class="fa-solid fa-trash mr-1"></i> Clear Room
+        </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2">
+        <div>
+            <label class="text-gray-400 block mb-1">Room ID</label>
+            <input type="text" id="adminRoomId" placeholder="e.g. 8472910" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
+            <label class="text-gray-400 block mb-1">Room Password</label>
+            <input type="text" id="adminRoomPass" placeholder="e.g. 1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-400">
+        </div>
+    </div>
+    <button onclick="updateRoomCredentials()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-2.5 rounded-xl text-xs transition">
+        UPDATE ROOM DETAILS
+    </button>
+</section>
+
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJ38YBPxLWTQcU00ioyqLWmNzqE4GSXOA",
+            authDomain: "coinex-cf911.firebaseapp.com",
+            projectId: "coinex-cf911",
+            storageBucket: "coinex-cf911.firebasestorage.app",
+            messagingSenderId: "949670057178",
+            appId: "1:949670057178:web:8754ec40c8c909873cc1e3",
+            measurementId: "G-WZY4F9B9XQ"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        window.onload = function() {
+            loadUsers();
+            loadAdminMatches();
+            loadDeposits();
+            loadWithdrawals();
+            loadAdminResults();
+        };
+        // Room ID aur Password Update karne ke liye
+function updateRoomCredentials() {
+    const roomId = document.getElementById('adminRoomId').value.trim();
+    const roomPass = document.getElementById('adminRoomPass').value.trim();
+
+    if (!roomId || !roomPass) {
+        alert("Room ID aur Password dono daalein!");
+        return;
+    }
+
+    db.ref('currentRoomDetails').set({
+        roomId: roomId,
+        roomPass: roomPass,
+        updatedAt: new Date().toLocaleString()
+    }, (err) => {
+        if (!err) {
+            alert("Room credentials successfully update ho gaye!");
+            document.getElementById('adminRoomId').value = "";
+            document.getElementById('adminRoomPass').value = "";
+        } else {
+            alert("Error: " + err.message);
+        }
+    });
+}
+
+// Room ID aur Password hatane (clear) karne ke liye
+function clearRoomCredentials() {
+    if (confirm("Kya aap Room ID aur Password clear karna chahte hain?")) {
+        db.ref('currentRoomDetails').remove((err) => {
+            if (!err) {
+                alert("Room credentials clear kar diye gaye!");
+            } else {
+                alert("Error: " + err.message);
+            }
+        });
+    }
+}
+
+
+        function loadUsers() {
+            db.ref('users').on('value', (snap) => {
+                let list = document.getElementById('adminUsersList'); list.innerHTML = "";
+                let data = snap.val();
+                if (!data) { list.innerHTML = `<p class="text-xs text-gray-400 text-center">No users.</p>`; return; }
+                document.getElementById('totalUsersCount').innerText = Object.keys(data).length + " Users";
+                for (let m in data) {
+                    let u = data[m];
+                    list.innerHTML += `<div class="bg-slate-900 p-3 rounded border border-slate-700 text-xs flex justify-between items-center"><div><b>${u.name || u.ign}</b><br><span class="text-[10px] text-gray-400">Mob: ${m} | UID: ${u.uid}</span></div><div class="text-right"><span class="text-emerald-400 font-bold">₹${u.wallet || 0}</span><br><button onclick="editWallet('${m}', ${u.wallet || 0})" class="bg-indigo-600 px-2 py-0.5 rounded text-[10px] mt-1">Edit</button></div></div>`;
+                }
+            });
+        }
+
+        function editWallet(mobile, bal) {
+            let nb = prompt("Naya balance daalein (₹):", bal);
+            if (nb !== null && !isNaN(nb)) db.ref('users/' + mobile).update({ wallet: Number(nb) });
+        }
+
+        function addNewMatch() {
+            let category = document.getElementById('matchCategory').value;
+            let title = document.getElementById('matchTitle').value.trim();
+            let time = document.getElementById('matchTime').value.trim();
+            let fee = Number(document.getElementById('matchFee').value);
+            let prize = Number(document.getElementById('matchPrize').value);
+            let perkill = Number(document.getElementById('matchPerkill').value);
+            if (!title || !time) { alert("Details bharein!"); return; }
+            
+            let matchId = 'match_' + Date.now();
+            db.ref('matches/' + matchId).set({ category, title, time, fee, prize, perkill }, (err) => {
+                if (!err) {
+                    alert("Match Published Successfully!");
+                    document.getElementById('matchTitle').value = "";
+                    document.getElementById('matchTime').value = "";
+                    document.getElementById('matchFee').value = "";
+                    document.getElementById('matchPrize').value = "";
+                    document.getElementById('matchPerkill').value = "";
+                }
+            });
+        }
+
+        // Active Matches Load & Delete
+        function loadAdminMatches() {
+            db.ref('matches').on('value', (snapshot) => {
+                const list = document.getElementById('adminMatchesList');
+                list.innerHTML = "";
+                const data = snapshot.val();
+                if (!data) {
+                    list.innerHTML = `<p class="text-xs text-gray-400 text-center">Koi active match nahi hai.</p>`;
+                    return;
+                }
+                for (let key in data) {
+                    let m = data[key];
+                    list.innerHTML += `
+                        <div class="bg-slate-900 p-3 rounded border border-slate-700 flex justify-between items-center text-xs">
+                            <div>
+                                <b class="text-yellow-400 block">${m.title}</b>
+                                <span class="text-gray-400 text-[10px]">${m.category} | ${m.time} | Fee: ₹${m.fee}</span>
+                            </div>
+                            <button onclick="deleteMatch('${key}')" class="bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/40 px-3 py-1.5 rounded font-bold transition">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function deleteMatch(key) {
+            if (confirm("Kya aap is match ko delete karna chahte hain?")) {
+                db.ref('matches/' + key).remove((err) => {
+                    if (!err) { alert("Match successfully delete ho gaya!"); }
+                    else { alert("Error: " + err.message); }
+                });
+            }
+        }
+
+        function updateRoomCredentials() {
+            let roomId = document.getElementById('adminRoomId').value.trim();
+            let roomPass = document.getElementById('adminRoomPass').value.trim();
+            if (!roomId || !roomPass) { alert("Room ID/Pass dalein!"); return; }
+            db.ref('currentRoomDetails').set({ roomId, roomPass }, () => { alert("Room Updated!"); });
+        }
+
+        function loadDeposits() {
+            db.ref('deposits').on('value', (snap) => {
+                let list = document.getElementById('adminDepositsList'); list.innerHTML = "";
+                let data = snap.val();
+                if (!data) { list.innerHTML = `<p class="text-xs text-gray-400 text-center">No deposits.</p>`; return; }
+                for (let utr in data) {
+                    let d = data[utr];
+                    if (d.status === "Pending") {
+                        list.innerHTML += `<div class="bg-slate-900 p-3 rounded border border-slate-700 text-xs flex justify-between items-center"><div><b>${d.ign}</b><br>₹${d.amount} | UTR: ${d.utr}</div><button onclick="approveDep('${utr}', '${d.mobile || d.uid}', ${d.amount}, '${d.txId}')" class="bg-emerald-500 text-slate-900 font-bold px-3 py-1 rounded">APPROVE</button></div>`;
+                    }
+                }
+            });
+        }
+
+        function approveDep(utr, uKey, amount, txId) {
+            db.ref('users/' + uKey + '/wallet').transaction((bal) => (bal || 0) + amount, (err) => {
+                if (!err) {
+                    db.ref('deposits/' + utr).update({ status: "Approved" });
+                    db.ref('transactions/' + uKey + '/' + txId).update({ status: "Approved" });
+                    alert("Approved!");
+                }
+            });
+        }
+
+        function loadWithdrawals() {
+            db.ref('withdrawals').on('value', (snap) => {
+                let list = document.getElementById('adminWithdrawalsList'); list.innerHTML = "";
+                let data = snap.val();
+                if (!data) { list.innerHTML = `<p class="text-xs text-gray-400 text-center">No withdrawals.</p>`; return; }
+                for (let id in data) {
+                    let w = data[id];
+                    if (w.status === "Pending") {
+                        list.innerHTML += `<div class="bg-slate-900 p-3 rounded border border-slate-700 text-xs flex justify-between items-center"><div><b>${w.ign}</b><br>₹${w.amount} | UPI: ${w.upiId}</div><button onclick="approveWith('${id}', '${w.mobile || w.uid}', '${w.txId}')" class="bg-emerald-500 text-slate-900 font-bold px-3 py-1 rounded">PAY</button></div>`;
+                    }
+                }
+            });
+        }
+
+        function approveWith(id, uKey, txId) {
+            db.ref('withdrawals/' + id).update({ status: "Paid" });
+            db.ref('transactions/' + uKey + '/' + txId).update({ status: "Paid" });
+            alert("Marked as Paid!");
+        }
+
+        function publishResult() {
+            const title = document.getElementById('resMatchTitle').value.trim();
+            const uid = document.getElementById('resWinnerUid').value.trim();
+            const ign = document.getElementById('resWinnerIgn').value.trim();
+            const kills = document.getElementById('resKills').value.trim();
+            const prize = Number(document.getElementById('resPrize').value.trim());
+
+            if (!title || !uid || !ign || !kills || !prize) { alert("Saari details bharein!"); return; }
+
+            db.ref('users').once('value', (snapshot) => {
+                const users = snapshot.val();
+                let targetUserKey = null;
+                for (let key in users) {
+                    if (users[key].uid === uid || key === uid) { targetUserKey = key; break; }
+                }
+                if (!targetUserKey) { alert("UID database me nahi mila!"); return; }
+
+                db.ref('users/' + targetUserKey + '/wallet').transaction((bal) => (bal || 0) + prize, (err) => {
+                    if (!err) {
+                        const resId = 'res_' + Date.now();
+                        db.ref('results/' + resId).set({ matchTitle: title, uid, ign, kills, prize, publishedAt: new Date().toLocaleString() });
+                        alert("Winner ko ₹" + prize + " bhej diye gaye aur result publish ho gaya!");
+                        document.getElementById('resMatchTitle').value = "";
+                        document.getElementById('resWinnerUid').value = "";
+                        document.getElementById('resWinnerIgn').value = "";
+                        document.getElementById('resKills').value = "";
+                        document.getElementById('resPrize').value = "";
+                    }
+                });
+            });
+        }
+
+        // Published Results Load & Delete
+        function loadAdminResults() {
+            db.ref('results').on('value', (snapshot) => {
+                const list = document.getElementById('adminResultsList');
+                list.innerHTML = "";
+                const data = snapshot.val();
+                if (!data) {
+                    list.innerHTML = `<p class="text-xs text-gray-400 text-center">Koi result publish nahi hua hai.</p>`;
+                    return;
+                }
+                for (let key in data) {
+                    let r = data[key];
+                    list.innerHTML += `
+                        <div class="bg-slate-900 p-2.5 rounded border border-slate-700 flex justify-between items-center text-xs">
+                            <div>
+                                <b class="text-emerald-400">${r.ign}</b> (Won ₹${r.prize})<br>
+                                <span class="text-[10px] text-gray-400">${r.matchTitle} | Kills: ${r.kills}</span>
+                            </div>
+                            <button onclick="deleteResult('${key}')" class="bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/40 px-2.5 py-1 rounded font-bold">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+        }
+        // Room ID aur Password Update karne ke liye
+function updateRoomCredentials() {
+    const roomId = document.getElementById('adminRoomId').value.trim();
+    const roomPass = document.getElementById('adminRoomPass').value.trim();
+
+    if (!roomId || !roomPass) {
+        alert("Room ID aur Password dono daalein!");
+        return;
+    }
+
+    db.ref('currentRoomDetails').set({
+        roomId: roomId,
+        roomPass: roomPass,
+        updatedAt: new Date().toLocaleString()
+    }, (err) => {
+        if (!err) {
+            alert("Room credentials successfully update ho gaye!");
+            document.getElementById('adminRoomId').value = "";
+            document.getElementById('adminRoomPass').value = "";
+        } else {
+            alert("Error: " + err.message);
+        }
+    });
+}
+        function deleteResult(key) {
+            if (confirm("Kya aap is published result ko delete karna chahte hain?")) {
+                db.ref('results/' + key).remove((err) => {
+                    if (!err) { alert("Result successfully delete ho gaya!"); }
+                    else { alert("Error: " + err.message); }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
